@@ -1,0 +1,143 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Kinetic City — CSS Keyframes v3 (Contrast & Life overhaul)
+   All transform + opacity only. Contained within parent bounds.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  .kinetic-anim { animation: none !important; }
+}
+
+/* ── Fear Tower ──────────────────────────────────────────────────────────── */
+@keyframes antenna-blink {
+  0%, 42%, 58%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
+}
+.kc-antenna { animation: antenna-blink 2s ease-in-out infinite; will-change: opacity; }
+
+@keyframes label-blink {
+  0%, 75%, 100% { opacity: 0.9; }
+  82% { opacity: 0.3; }
+}
+.kc-label-blink { animation: label-blink 3.5s ease-in-out infinite; will-change: opacity; }
+
+@keyframes candle-shrink {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(0.6); }
+}
+.kc-candle-1 { animation: candle-shrink 7s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-candle-2 { animation: candle-shrink 7s ease-in-out infinite 1.2s; transform-origin: bottom; will-change: transform; }
+.kc-candle-3 { animation: candle-shrink 7s ease-in-out infinite 2.4s; transform-origin: bottom; will-change: transform; }
+.kc-candle-4 { animation: candle-shrink 7s ease-in-out infinite 3.6s; transform-origin: bottom; will-change: transform; }
+.kc-candle-5 { animation: candle-shrink 7s ease-in-out infinite 4.8s; transform-origin: bottom; will-change: transform; }
+
+/* ── Index Temple — bar breathing ────────────────────────────────────────── */
+@keyframes bar-grow-1 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.18); } }
+@keyframes bar-grow-2 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.10); } }
+@keyframes bar-grow-3 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.22); } }
+@keyframes bar-grow-4 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.06); } }
+@keyframes bar-grow-5 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.15); } }
+@keyframes bar-grow-6 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.08); } }
+@keyframes bar-grow-7 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.25); } }
+@keyframes bar-grow-8 { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.12); } }
+
+.kc-bar-1 { animation: bar-grow-1 5s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-2 { animation: bar-grow-2 6.2s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-3 { animation: bar-grow-3 4.8s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-4 { animation: bar-grow-4 7s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-5 { animation: bar-grow-5 5.5s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-6 { animation: bar-grow-6 6.5s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-7 { animation: bar-grow-7 4.2s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+.kc-bar-8 { animation: bar-grow-8 5.8s ease-in-out infinite; transform-origin: bottom; will-change: transform; }
+
+/* ── Window glow ─────────────────────────────────────────────────────────── */
+@keyframes win-glow-a { 0%,100% { opacity: 0.35; } 50% { opacity: 0.75; } }
+@keyframes win-glow-b { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+.kc-win-a { animation: win-glow-a 3.5s ease-in-out infinite; will-change: opacity; }
+.kc-win-b { animation: win-glow-b 4.5s ease-in-out infinite 1.2s; will-change: opacity; }
+.kc-win-c { animation: win-glow-a 5s ease-in-out infinite 2s; will-change: opacity; }
+.kc-win-d { animation: win-glow-b 3.2s ease-in-out infinite 0.8s; will-change: opacity; }
+
+/* ── SIP Factory coins ───────────────────────────────────────────────────── */
+@keyframes coin-float {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 1; }
+  75% { opacity: 0.7; }
+  100% { transform: translateY(-38px); opacity: 0; }
+}
+.kc-coin-1 { animation: coin-float 3s ease-out infinite; will-change: transform, opacity; }
+.kc-coin-2 { animation: coin-float 3s ease-out infinite 1s; will-change: transform, opacity; }
+.kc-coin-3 { animation: coin-float 3s ease-out infinite 2s; will-change: transform, opacity; }
+
+/* ── SIP Factory conveyor ────────────────────────────────────────────────── */
+@keyframes pkg-slide {
+  0% { transform: translateX(0); opacity: 0; }
+  8% { opacity: 0.85; }
+  85% { opacity: 0.85; }
+  100% { transform: translateX(48px); opacity: 0; }
+}
+.kc-pkg-1 { animation: pkg-slide 3s linear infinite; will-change: transform, opacity; }
+.kc-pkg-2 { animation: pkg-slide 3s linear infinite 1.5s; will-change: transform, opacity; }
+
+/* ── Factory glow ────────────────────────────────────────────────────────── */
+@keyframes factory-bloom {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(192,241,142,0.1)); }
+  50% { filter: drop-shadow(0 0 18px rgba(192,241,142,0.28)); }
+}
+.kc-factory-glow { animation: factory-bloom 5s ease-in-out infinite; will-change: filter; }
+
+/* ── FD Vault coin reject ────────────────────────────────────────────────── */
+@keyframes coin-reject {
+  0%, 100% { transform: translateX(0); }
+  35% { transform: translateX(8px); }
+  45% { transform: translateX(4px); }
+  55% { transform: translateX(6px); }
+  65% { transform: translateX(0); }
+}
+.kc-coin-reject { animation: coin-reject 4s ease-in-out infinite; will-change: transform; }
+
+/* ── Lighthouse beam ─────────────────────────────────────────────────────── */
+@keyframes beam-sweep {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.kc-beam { animation: beam-sweep 8s linear infinite; will-change: transform; }
+
+/* ── Lighthouse portholes ────────────────────────────────────────────────── */
+@keyframes porthole { 0%,100% { opacity: 0.3; } 50% { opacity: 0.7; } }
+.kc-port-a { animation: porthole 4s ease-in-out infinite; will-change: opacity; }
+.kc-port-b { animation: porthole 3.5s ease-in-out infinite 1.5s; will-change: opacity; }
+
+/* ── Lighthouse door ─────────────────────────────────────────────────────── */
+@keyframes door-warmth { 0%,100% { opacity: 0.15; } 50% { opacity: 0.45; } }
+.kc-door-light { animation: door-warmth 6s ease-in-out infinite; will-change: opacity; }
+
+/* ── Crash Memorial flame ────────────────────────────────────────────────── */
+@keyframes flame {
+  0%   { transform: scaleY(1) scaleX(1);    opacity: 0.7; }
+  25%  { transform: scaleY(1.1) scaleX(0.9); opacity: 0.9; }
+  50%  { transform: scaleY(0.85) scaleX(1.1); opacity: 0.75; }
+  75%  { transform: scaleY(1.1) scaleX(0.88); opacity: 0.85; }
+  100% { transform: scaleY(1) scaleX(1);    opacity: 0.7; }
+}
+.kc-flame { animation: flame 0.9s ease-in-out infinite; transform-origin: bottom center; will-change: transform, opacity; }
+
+/* ── Trees ────────────────────────────────────────────────────────────────── */
+@keyframes tree-sway {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.03); }
+}
+.kc-tree { animation: tree-sway 25s ease-in-out infinite; transform-origin: bottom center; will-change: transform; }
+
+/* ── Road pulse dots ─────────────────────────────────────────────────────── */
+@keyframes dot-glow {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+.kc-dot-glow { animation: dot-glow 1.5s ease-in-out infinite; will-change: opacity; }
+
+/* ── Ticker scroll ───────────────────────────────────────────────────────── */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.kc-ticker-track { animation: ticker-scroll 45s linear infinite; will-change: transform; }

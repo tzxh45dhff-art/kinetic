@@ -16,6 +16,24 @@
   --font-mono: 'Inter', monospace;
 }
 
+:root {
+  --bg: #00161b;
+  --surface: rgba(255,255,255,0.04);
+  --surface-hover: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border-bright: rgba(255,255,255,0.18);
+  --text-primary: rgba(255,255,255,0.92);
+  --text-secondary: rgba(255,255,255,0.48);
+  --accent: #c0f18e;
+  --accent-dim: rgba(192,241,142,0.12);
+  --teal: #1D9E75;
+  --danger: #E24B4A;
+  --blue: #378ADD;
+  --radius-sm: 8px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
 /* Reset: ensure full-bleed dark background everywhere */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -66,3 +84,17 @@ h1, h2, h3, h4, h5, h6 {
 .box-glow:hover {
   box-shadow: 0 0 30px rgba(192, 241, 142, 0.35);
 }
+
+/* Marketing navbar scroll state */
+.nav-marketing {
+  background: transparent;
+}
+.nav-marketing[data-scrolled] {
+  background: #00161b;
+  border-bottom-color: rgba(255,255,255,0.07) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Accent text matches lime green */
+.accent { color: var(--accent); }

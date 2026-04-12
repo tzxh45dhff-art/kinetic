@@ -1,11 +1,16 @@
 import { motion } from 'framer-motion'
+import { useAppStore } from '../../store/useAppStore'
 
 export default function LowerWidgets() {
+  const holdings = useAppStore(s => s.holdings)
+
+  const hot = holdings?.hotTicker
+  const dividend = holdings?.dividendAlert
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 w-full">
 
       {/* ── Capital Efficiency Banner ─────────────────────────────────────── */}
-      {/* This is the ONE intentional "inverse" card — light surface on dark page */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -24,7 +29,6 @@ export default function LowerWidgets() {
 
         <div className="relative z-10 flex flex-col justify-between h-full p-8 md:p-10">
           <div>
-            {/* Label chip */}
             <div className="inline-flex items-center bg-[#c0f18e]/60 text-[#0a2000] text-[8px] font-sans font-black tracking-[0.2em] px-3 py-1.5 rounded mb-8">
               ALGORITHM INSIGHT
             </div>
@@ -52,7 +56,7 @@ export default function LowerWidgets() {
       {/* ── Right Column ─────────────────────────────────────────────────── */}
       <div className="flex flex-col gap-5">
 
-        {/* Hot Ticker */}
+        {/* Hot Ticker — from API */}
         <motion.div
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
@@ -63,24 +67,30 @@ export default function LowerWidgets() {
             <span className="text-[8px] font-sans font-black tracking-[0.2em] text-[#c0f18e] uppercase">
               Hot Ticker
             </span>
-            <span className="text-[10px] font-mono text-white/30">14:20 PM</span>
+            <span className="text-[10px] font-mono text-white/30">
+              {hot?.time ?? '—'}
+            </span>
           </div>
 
           <div className="flex justify-between items-end">
             <div>
               <h3 className="font-display text-2xl text-white font-semibold mb-1 tracking-tight">
-                RELIANCE
+                {hot?.symbol ?? '...'}
               </h3>
-              <p className="text-xs font-sans text-white/35">Energy &amp; Retail</p>
+              <p className="text-xs font-sans text-white/35">{hot?.sector ?? ''}</p>
             </div>
             <div className="text-right">
-              <p className="font-display text-xl text-white font-medium mb-1 tracking-tight">₹2,482.10</p>
-              <p className="text-xs font-mono font-bold text-[#c0f18e]">+2.45%</p>
+              <p className="font-display text-xl text-white font-medium mb-1 tracking-tight">
+                {hot?.price ?? '—'}
+              </p>
+              <p className={`text-xs font-mono font-bold ${hot?.positive ? 'text-[#c0f18e]' : 'text-red-400'}`}>
+                {hot?.change ?? ''}
+              </p>
             </div>
           </div>
         </motion.div>
 
-        {/* Dividend Alert */}
+        {/* Dividend Alert — from API */}
         <motion.div
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
@@ -91,17 +101,25 @@ export default function LowerWidgets() {
             <span className="text-[8px] font-sans font-black tracking-[0.2em] text-amber-400 uppercase">
               Dividend Alert
             </span>
-            <span className="text-[10px] font-mono text-white/30">Today</span>
+            <span className="text-[10px] font-mono text-white/30">
+              {dividend?.date ?? '—'}
+            </span>
           </div>
 
           <div className="flex justify-between items-end">
             <div>
-              <h3 className="font-display text-2xl text-white font-semibold mb-1 tracking-tight">TCS</h3>
-              <p className="text-xs font-sans text-white/35">IT Services</p>
+              <h3 className="font-display text-2xl text-white font-semibold mb-1 tracking-tight">
+                {dividend?.symbol ?? '...'}
+              </h3>
+              <p className="text-xs font-sans text-white/35">{dividend?.sector ?? ''}</p>
             </div>
             <div className="text-right">
-              <p className="font-display text-xl text-white font-medium mb-1 tracking-tight">₹3,420.00</p>
-              <p className="text-xs font-sans text-white/35">₹12.00 / share</p>
+              <p className="font-display text-xl text-white font-medium mb-1 tracking-tight">
+                {dividend?.price ?? '—'}
+              </p>
+              <p className="text-xs font-sans text-white/35">
+                {dividend?.dividendPerShare ?? ''}
+              </p>
             </div>
           </div>
         </motion.div>

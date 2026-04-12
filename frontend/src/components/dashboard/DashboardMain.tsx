@@ -1,11 +1,22 @@
 import { motion } from 'framer-motion'
+import { useAppStore } from '../../store/useAppStore'
+
 import WelcomeHeader from './WelcomeHeader'
 import MetricsGrid from './MetricsGrid'
 import PerformanceChart from './PerformanceChart'
 import FeatureModules from './FeatureModules'
 import LowerWidgets from './LowerWidgets'
+import OnboardingDashboard from './OnboardingDashboard'
 
 export default function DashboardMain() {
+  const isNewUser = useAppStore(s => s.isNewUser)
+
+  // New user → onboarding dashboard
+  if (isNewUser) {
+    return <OnboardingDashboard />
+  }
+
+  // Returning user (Jais) → full portfolio dashboard
   return (
     <motion.main
       initial={{ opacity: 0 }}
