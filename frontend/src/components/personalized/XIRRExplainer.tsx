@@ -67,7 +67,7 @@ export default function XIRRExplainer() {
           You invested <span className="text-white">{formatINR(totalInvested)}</span> over <span className="text-white">{months} months</span>.
           Your money grew to <span style={{ color: 'var(--teal)' }}>{formatINR(finalValue)}</span>.
         </p>
-        <p className="font-display font-bold text-2xl mt-2" style={{ color: 'var(--accent)' }}>XIRR: {xirr.toFixed(1)}%</p>
+        <p className="font-display font-bold text-2xl mt-2" style={{ color: 'var(--accent)' }}>XIRR: {(xirr * 100).toFixed(1)}%</p>
       </div>
 
       {/* Plain explanation */}

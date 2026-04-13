@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { motion, useMotionValue, animate, useScroll, useTransform } from 'framer-motion'
+import { motion, useMotionValue, animate } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import './kinetic-city.css'
 
@@ -27,17 +27,54 @@ const C = {
 }
 
 /* ── Ticker ────────────────────────────────────────────────────────────────── */
-const TICKER = 'NIFTY 50  24,198  ▲1.2%   ·   SENSEX  79,442  ▲0.8%   ·   MIDCAP  11,024  ▲2.1%   ·   SMALLCAP  8,847  ▲3.4%   ·   GOLD  ₹7,842/g  ▲0.3%   ·   USD/INR  83.42  ▼0.1%   ·   10Y BOND  7.1%  ─0.0%   ·   '
+const TICKER_FALLBACK = 'NIFTY 50  24,198  ▲1.2%   ·   SENSEX  79,442  ▲0.8%   ·   MIDCAP  11,024  ▲2.1%   ·   SMALLCAP  8,847  ▲3.4%   ·   GOLD  ₹7,842/g  ▲0.3%   ·   USD/INR  83.42  ▼0.1%   ·   10Y BOND  7.1%  ─0.0%   ·   '
 
-function TickerContent() {
-  const parts = TICKER.split(/(▲\S+|▼\S+|─\S+)/)
+interface MarketItem { label: string; price: string; change: number; direction: 'up' | 'down'; inverse?: boolean }
+
+function useMarketTicker() {
+  const [items, setItems] = useState<MarketItem[] | null>(null)
+  useEffect(() => {
+    fetch('/api/market/latest')
+      .then(r => r.json())
+      .then(d => { if (d.items?.length) setItems(d.items) })
+      .catch(() => {}) // silently fall back to static
+  }, [])
+  return items
+}
+
+function TickerContent({ items }: { items: MarketItem[] | null }) {
+  if (!items) {
+    // Fallback: render static ticker
+    const parts = TICKER_FALLBACK.split(/(▲\S+|▼\S+|─\S+)/)
+    return (
+      <>
+        {parts.map((p, i) => {
+          if (p.startsWith('▲')) return <span key={i} style={{ color: C.teal }}>{p}</span>
+          if (p.startsWith('▼')) return <span key={i} style={{ color: C.danger }}>{p}</span>
+          if (p.startsWith('─')) return <span key={i} style={{ color: C.txtMd }}>{p}</span>
+          return <span key={i}>{p}</span>
+        })}
+      </>
+    )
+  }
   return (
     <>
-      {parts.map((p, i) => {
-        if (p.startsWith('▲')) return <span key={i} style={{ color: C.teal }}>{p}</span>
-        if (p.startsWith('▼')) return <span key={i} style={{ color: C.danger }}>{p}</span>
-        if (p.startsWith('─')) return <span key={i} style={{ color: C.txtMd }}>{p}</span>
-        return <span key={i}>{p}</span>
+      {items.map((item, i) => {
+        const isUp = item.direction === 'up'
+        const isInverse = !!item.inverse
+        const itemColor = isUp 
+          ? (isInverse ? C.danger : C.teal) 
+          : (isInverse ? C.teal : C.danger)
+
+        return (
+          <span key={i}>
+            {item.label}  {item.price}  
+            <span style={{ color: itemColor }}>
+              {isUp ? '▲' : '▼'}{Math.abs(item.change)}%
+            </span>
+            {'   ·   '}
+          </span>
+        )
       })}
     </>
   )
@@ -92,10 +129,10 @@ const rise = { type: 'spring' as const, stiffness: 180, damping: 18, mass: 1.0 }
 
 /* ── Fear card data ────────────────────────────────────────────────────────── */
 const FEAR_CARDS = [
-  { label: 'Loss Avoider',          desc: 'Fear of losing money',         Icon: ShieldIcon, color: C.danger, posStyle: { left: '20px',  top: '20px' } },
-  { label: 'Clarity Seeker',        desc: 'Fear of not understanding',    Icon: SearchIcon, color: C.blue,   posStyle: { right: '20px', top: '20px' } },
-  { label: 'Pattern Detector',      desc: 'Fear of being scammed',        Icon: FpIcon,     color: C.amber,  posStyle: { left: '20px',  bottom: '120px' } },
-  { label: 'Independence Guardian', desc: 'Fear of trusting others',      Icon: UnlockIcon, color: C.teal,   posStyle: { right: '20px', bottom: '120px' } },
+  { label: 'Loss Avoider',          desc: 'Fear of losing money',         Icon: ShieldIcon, color: C.danger, posStyle: { left: '25px',  top: '30px' } },
+  { label: 'Clarity Seeker',        desc: 'Fear of not understanding',    Icon: SearchIcon, color: C.blue,   posStyle: { right: '45px', bottom: '330px' } },
+  { label: 'Pattern Detector',      desc: 'Fear of being scammed',        Icon: FpIcon,     color: C.amber,  posStyle: { left: '30px',  bottom: '48px' } },
+  { label: 'Independence Guardian', desc: 'Fear of trusting others',      Icon: UnlockIcon, color: C.teal,   posStyle: { right: '30px', bottom: '48px' } },
 ]
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
@@ -109,6 +146,7 @@ export default function KineticCity({ onStart }: Props) {
   const clock = useClock()
   const fearPct = useFearPct()
   const sipCount = useSipCounter()
+  const marketItems = useMarketTicker()
 
   // Pause CSS anims when tab hidden
   useEffect(() => {
@@ -191,8 +229,8 @@ export default function KineticCity({ onStart }: Props) {
           <motion.p
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: D.sub, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="font-display font-medium text-lg md:text-2xl mb-2 select-none"
-            style={{ color: 'rgba(255,255,255,0.7)' }}
+            className="font-display font-medium text-lg md:text-2xl mb-2 select-none kc-text-spotlight"
+            style={{ color: 'rgba(255,255,255,0.7)', position: 'relative', zIndex: 60 }}
           >
             Face the fear. Start with &#8377;500.
           </motion.p>
@@ -253,7 +291,6 @@ export default function KineticCity({ onStart }: Props) {
           width: '100%',
           flex: 1,
           minHeight: 0,
-          overflow: 'hidden',
         }}
       >
         {/* ── Fear Type Cards (floating in Zone B) ─────────────── */}
@@ -305,6 +342,7 @@ export default function KineticCity({ onStart }: Props) {
         <svg
           viewBox="0 0 1000 540"
           preserveAspectRatio="xMidYMax slice"
+          overflow="visible"
           role="img"
           aria-label="An animated financial city representing the Kinetic investment journey."
           style={{
@@ -463,8 +501,8 @@ export default function KineticCity({ onStart }: Props) {
           >
             <polygon points={`855,${GY} 885,${GY} 880,${GY-185} 860,${GY-185}`} fill={C.surfHover} stroke={C.border} strokeWidth="0.5" />
             <rect x="856" y={GY-200} width="28" height="16" rx="4" fill={C.surfBright} stroke={C.accent} strokeWidth="0.5" />
-            <g className="kinetic-anim kc-beam" style={{ transformOrigin: `870px ${GY-192}px` }}>
-              <polygon points={`870,${GY-192} 920,${GY-210} 920,${GY-205}`} fill={C.accent} opacity="0.25" />
+            <g className="kinetic-anim kc-beam" style={{ transformOrigin: `870px ${GY-192}px`, animation: 'beam-sweep-spotlight 12s infinite' }}>
+              <polygon points={`870,${GY-192} 2370,${GY-492} 2370,${GY+108}`} fill={C.accent} />
             </g>
             <circle cx="870" cy={GY-155} r="3" fill={C.accent} opacity="0.6" className="kinetic-anim kc-port-a" />
             <circle cx="870" cy={GY-125} r="3" fill={C.accent} opacity="0.6" className="kinetic-anim kc-port-b" />
@@ -515,8 +553,8 @@ export default function KineticCity({ onStart }: Props) {
            }}
         >
           <div className="kinetic-anim kc-ticker-track" style={{ display: 'flex', whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.02em', color: C.txtMd }}>
-            <span><TickerContent /></span>
-            <span><TickerContent /></span>
+            <span><TickerContent items={marketItems} /></span>
+            <span><TickerContent items={marketItems} /></span>
           </div>
         </motion.div>
 

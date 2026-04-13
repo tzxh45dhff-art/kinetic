@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useRef, useEffect } from 'react'
 import { useAppStore, type FearType } from '../../../store/useAppStore'
 import { Send } from 'lucide-react'
+import { fetchArjunNewsContext } from '../../../lib/newsAPI'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
@@ -65,6 +66,23 @@ export default function ArjunPage() {
   const [error, setError] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [newsContext, setNewsContext] = useState('')
+  const newsItems = useAppStore(s => s.newsItems) || []
+
+  // Fetch news context for Arjun on mount
+  useEffect(() => {
+    fetchArjunNewsContext().then(ctx => {
+      if (ctx) setNewsContext(ctx)
+    })
+  }, [])
+
+  // Generate dynamic news-based questions
+  const newsBasedQuestions = newsItems.slice(0, 4).map(item =>
+    `What does "${item.title.split(' ').slice(0, 6).join(' ')}..." mean for my SIP?`
+  )
+  const allSuggestions = newsBasedQuestions.length > 0
+    ? [...newsBasedQuestions.slice(0, 2), ...SUGGESTED_QUESTIONS[fearType].slice(0, 2)]
+    : SUGGESTED_QUESTIONS[fearType]
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
@@ -93,7 +111,9 @@ export default function ArjunPage() {
           message: text.trim(),
           fear_type: fearType,
           metaphor_style: metaphorStyle,
-          context: 'arjun_chat_page',
+          context: newsContext
+            ? `arjun_chat_page\n\nCurrent market context: ${newsContext}`
+            : 'arjun_chat_page',
           conversation_history: history,
         }),
       })
@@ -164,7 +184,7 @@ export default function ArjunPage() {
         {/* Suggested questions — show after first message only */}
         {messages.length === 1 && (
           <div className="flex flex-wrap gap-2 ml-10">
-            {SUGGESTED_QUESTIONS[fearType].map((q, i) => (
+            {allSuggestions.map((q, i) => (
               <button key={i} onClick={() => sendMessage(q)}
                 className="px-3.5 py-2 rounded-full text-xs font-sans border transition-[background-color,border-color] duration-200 hover:border-[var(--border-bright)]"
                 style={{ background: 'var(--surface)', borderColor: 'var(--border)', color: 'rgba(255,255,255,0.5)' }}

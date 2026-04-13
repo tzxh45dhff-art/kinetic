@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import Lenis from 'lenis'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useAppStore } from './store/useAppStore'
+import { fetchMarketNews } from './lib/newsAPI'
 
 import MarketingLanding from './components/marketing/MarketingLanding'
 import FearProfiler from './components/landing/FearProfiler'
@@ -17,6 +18,13 @@ function App() {
   // ── Always start at landing on a fresh page load ────────────────────────────
   useEffect(() => {
     setView('landing')
+
+    // Initialize news cache
+    fetchMarketNews(useAppStore.getState().fearType || undefined).then(items => {
+      if (items.length) {
+        useAppStore.setState({ newsItems: items, newsLastFetched: Date.now() })
+      }
+    }).catch(() => { /* fallback items already returned by fetchMarketNews */ })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // empty deps — runs exactly once on mount
 

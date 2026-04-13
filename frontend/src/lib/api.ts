@@ -48,7 +48,7 @@ export interface HoldingsData {
 // ── Fetchers ────────────────────────────────────────────────────────────────
 
 async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`)
+  const res = await fetch(`${BASE}${path}`, { signal: AbortSignal.timeout(5000) })
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`)
   return res.json()
 }
@@ -78,6 +78,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(5000),
   })
   if (!res.ok) throw new Error(`API ${path} returned ${res.status}`)
   return res.json()

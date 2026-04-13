@@ -37,7 +37,7 @@ self.onmessage = (e: MessageEvent<SimMessage>) => {
     let portfolio = 0
     for (let m = 1; m <= months; m++) {
       portfolio += monthlyAmount
-      const monthlyReturn = Math.exp(mu + sigma * boxMuller()) - 1
+      const monthlyReturn = Math.exp(mu - (sigma * sigma) / 2 + sigma * boxMuller()) - 1
       portfolio *= (1 + monthlyReturn)
       path.push(portfolio)
     }

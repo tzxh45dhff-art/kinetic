@@ -15,6 +15,8 @@ import {
   ColorType,
   CrosshairMode,
 } from 'lightweight-charts'
+import NewsImpactCard from '../../news/NewsImpactCard'
+import { getFearFraming } from '../../../lib/newsAPI'
 
 // ── Animation presets ───────────────────────────────────────────────────────
 
@@ -622,6 +624,7 @@ function ActivePortfolio() {
   const containerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Area'> | null>(null)
+  const newsItems = useAppStore(s => s.newsItems) || []
 
   // Calculate months since portfolio setup
   const monthsSinceSetup = useMemo(() => {
@@ -663,6 +666,18 @@ function ActivePortfolio() {
     if (chartData.length < 2) return 0
     return ((chartData[chartData.length - 1].value - chartData[0].value) / chartData[0].value) * 100
   }, [chartData])
+
+  // Get relevant news for portfolio holdings (hackathon stub logic)
+  const relevantNews = useMemo(() => {
+    if (!newsItems.length) return []
+    // Simulating looking for 'banking' or 'energy' based on dummy holdings
+    const sectors = ['banking', 'energy', 'technology', 'it', 'bank', 'oil', 'auto']
+    const matches = newsItems.filter(n => {
+      const txt = (n.title + ' ' + n.summary).toLowerCase()
+      return sectors.some(s => txt.includes(s))
+    })
+    return matches.length > 0 ? matches.slice(0, 3) : newsItems.slice(0, 3)
+  }, [newsItems])
 
   // Create chart
   useEffect(() => {
@@ -735,6 +750,9 @@ function ActivePortfolio() {
         <h1 className="font-display font-semibold text-2xl text-white tracking-tight mb-1">{userName ? `${userName}'s Portfolio` : 'Your Portfolio'}</h1>
         <p className="font-sans text-xs text-white/30">Simulated performance · Based on {selectedFund} historical data</p>
       </div>
+
+      {/* News Impact Card */}
+      <NewsImpactCard context="portfolio" fearType={fearType} />
 
       {/* Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -836,6 +854,23 @@ function ActivePortfolio() {
           <p className="font-sans text-sm text-white/50 leading-relaxed">{insight}</p>
         </div>
       </motion.div>
+
+      {/* What's moving your portfolio - targeted news */}
+      {relevantNews.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45, duration: 0.4 }}
+          className="rounded-3xl p-6 border" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
+          <p className="font-sans text-[10px] text-white/20 uppercase tracking-wider mb-4">What's moving your portfolio</p>
+          <div className="space-y-3">
+            {relevantNews.map((item, i) => (
+              <div key={i} className="flex items-center gap-2.5">
+                <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: item.sentiment === 'positive' ? 'var(--teal)' : item.sentiment === 'negative' ? 'var(--danger)' : 'rgba(255,255,255,0.25)' }} />
+                <p className="font-sans text-xs text-white/60 truncate flex-1">{item.title}</p>
+                <span className="font-sans text-[10px] text-white/20 shrink-0">{item.source} · {item.time}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   )
 }

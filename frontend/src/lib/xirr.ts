@@ -75,6 +75,6 @@ export function calculateSIPXIRR(
   cashflows.push({ amount: finalValue, date: endDate })
 
   const xirr = calculateXIRR(cashflows)
-  if (isNaN(xirr)) return 0
-  return Math.round(xirr * 1000) / 10 // return as percentage with 1 decimal
+  if (isNaN(xirr) || !isFinite(xirr)) return 0
+  return xirr // returns decimal — display code should * 100
 }

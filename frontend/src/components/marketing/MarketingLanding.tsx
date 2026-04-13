@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../../store/useAppStore'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
 import { ArrowRight, Lock, ChevronRight } from 'lucide-react'
@@ -349,11 +350,13 @@ export default function MarketingLanding() {
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
+  const navigate = useNavigate()
   const setView = useAppStore(s => s.setView)
 
   const handleStart = useCallback(() => {
     setView('quiz')
-  }, [setView])
+    navigate('/start')
+  }, [setView, navigate])
 
   const statsRef = useRef<HTMLDivElement>(null)
 

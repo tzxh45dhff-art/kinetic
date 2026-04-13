@@ -141,3 +141,26 @@
   100% { transform: translateX(-50%); }
 }
 .kc-ticker-track { animation: ticker-scroll 45s linear infinite; will-change: transform; }
+
+/* ── Lighthouse Spotlight ────────────────────────────────────────────────── */
+@keyframes beam-sweep-spotlight {
+  0% { transform: rotate(203deg) scaleY(1); opacity: 0.12; filter: none; }
+  60% { transform: rotate(563deg) scaleY(1); opacity: 0.12; filter: none; } 
+  65% { transform: rotate(563deg) scaleY(1.4); opacity: 0.25; filter: drop-shadow(0 0 10px rgba(192,241,142,0.4)); } 
+  85% { transform: rotate(563deg) scaleY(1.4); opacity: 0.25; filter: drop-shadow(0 0 10px rgba(192,241,142,0.4)); } 
+  90% { transform: rotate(563deg) scaleY(1); opacity: 0.12; filter: none; } 
+  100% { transform: rotate(563deg) scaleY(1); opacity: 0.12; filter: none; }
+}
+
+@keyframes text-spotlight {
+  0%, 60% { text-shadow: none; color: rgba(255,255,255,0.7); }
+  65%, 85% { 
+    text-shadow: 0 0 25px rgba(192,241,142,0.7), 0 0 45px rgba(192,241,142,0.3); 
+    color: #fff; 
+  }
+  90%, 100% { text-shadow: none; color: rgba(255,255,255,0.7); }
+}
+
+.kc-text-spotlight {
+  animation: text-spotlight 12s infinite;
+}

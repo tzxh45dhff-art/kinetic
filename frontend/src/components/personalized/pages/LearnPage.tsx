@@ -8,11 +8,12 @@ import CopyTheMarket from '../CopyTheMarket'
 import XIRRExplainer from '../XIRRExplainer'
 import MarketExplainer from '../MarketExplainer'
 import CrashTimeline from '../CrashTimeline'
+import NewsImpactCard from '../../news/NewsImpactCard'
 import { CRASH_SUMMARY_STATS } from '../../../lib/crashData'
 import {
-  getTrackForFear, isModuleLocked, getNextModule,
+  getTrackForFear, isModuleLocked,
   TRACK_NAMES, TRACK_COLORS, TYPE_COLORS, ALL_TRACKS,
-  type CurriculumModule, type FearTrack,
+  type FearTrack,
 } from '../../../lib/curriculumData'
 
 // ── GLOSSARY — 40 essential investing terms ─────────────────────────────────
@@ -174,54 +175,6 @@ function TypewriterText({ text, delay = 30 }: { text: string; delay?: number }) 
         </motion.span>
       )}
     </p>
-  )
-}
-
-function CrashHistoryModule() {
-  return (
-    <div className="space-y-6">
-      <p className="font-sans text-sm text-white/50 leading-relaxed">
-        India's market has survived everything thrown at it since 2000. Here's the proof.
-      </p>
-
-      {/* Crash Timeline */}
-      <CrashTimeline />
-
-      {/* Summary stat cards */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { label: 'Crashes since 2000', value: `${CRASH_SUMMARY_STATS.totalCrashes}`, sub: 'All recovered', color: 'var(--teal)' },
-          { label: 'Avg recovery', value: `${CRASH_SUMMARY_STATS.averageRecoveryMonths} months`, sub: 'From bottom to break-even', color: 'var(--accent)' },
-          { label: 'Worst crash', value: `${CRASH_SUMMARY_STATS.worstDrop}%`, sub: '2008 GFC. Recovered in 32 months.', color: 'var(--danger)' },
-          { label: 'Best post-crash', value: `+${CRASH_SUMMARY_STATS.bestPostCrashReturn}%`, sub: 'FY10 — greatest recovery year', color: 'var(--teal)' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 15 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: i * 0.1, duration: 0.4 }}
-            className="rounded-2xl p-4 border"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-          >
-            <p className="text-[8px] font-sans text-white/25 uppercase tracking-wider mb-1">{stat.label}</p>
-            <p className="font-display font-bold text-lg" style={{ color: stat.color }}>{stat.value}</p>
-            <p className="font-sans text-[9px] text-white/25 mt-1">{stat.sub}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Arjun insight */}
-      <div className="flex gap-3 mt-4">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(192,241,142,0.08)', border: '1px solid rgba(192,241,142,0.18)' }}>
-          <Zap className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-        </div>
-        <div className="rounded-2xl p-4 border flex-1" style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}>
-          <p className="font-sans text-[9px] text-white/20 uppercase tracking-wider mb-2">Arjun's takeaway</p>
-          <TypewriterText text="Every crash on this timeline felt like the end of the world while it was happening. News channels screamed sell. Your friends pulled out. The math said hold. The math was right every single time. The only investors who permanently lost money were those who converted a temporary dip into a permanent loss by selling at the bottom." />
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -564,7 +517,6 @@ export default function LearnPage() {
   const modules = getModulesForFear(fearType)
   const curriculumTrack = getTrackForFear(fearType)
   const completedCount = modules.filter(m => completedModules.includes(m.id)).length
-  const trackColor = TRACK_COLORS[fearType as FearTrack] || '#c0f18e'
   const trackName = TRACK_NAMES[fearType as FearTrack] || 'Your Track'
 
   // Glossary search + filter
@@ -583,9 +535,9 @@ export default function LearnPage() {
     ...s,
     status: s.step === 1 ? 'done'
       : s.step === 2 ? (completedModules.length >= 10 ? 'done' : completedModules.length > 0 ? 'current' : 'locked')
-      : s.step === 3 ? (simulationResult ? 'done' : 'current')
-      : s.step === 4 ? (timeMachineResult ? 'done' : simulationResult ? 'current' : 'locked')
-      : s.step <= 3 ? 'locked' : 'locked',
+        : s.step === 3 ? (simulationResult ? 'done' : 'current')
+          : s.step === 4 ? (timeMachineResult ? 'done' : simulationResult ? 'current' : 'locked')
+            : s.step <= 3 ? 'locked' : 'locked',
   }))
 
   const tabs = [
@@ -596,6 +548,11 @@ export default function LearnPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+      {/* News Impact Card */}
+      <div className="mb-6">
+        <NewsImpactCard context="learn" fearType={fearType} />
+      </div>
+
       {/* Tab bar */}
       <div className="flex gap-2 mb-6 overflow-x-auto">
         {tabs.map(tab => {

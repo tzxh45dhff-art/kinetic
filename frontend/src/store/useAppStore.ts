@@ -164,6 +164,14 @@ interface AppState {
   error: string | null
   fetchDashboardData: () => Promise<void>
 
+  // ── News (session-only, not persisted) ─────────────────────────────────────
+  newsItems: any[]
+  newsLastFetched: number | null
+
+  // ── Convenience aliases ──────────────────────────────────────────────────────────
+  setSipSetupDate: (v: string) => void   // alias for setPortfolioSetupDate
+  resetForNewUser: () => void             // resets progress while keeping profile
+
   // ── Reset ─────────────────────────────────────────────────────────────────
   reset: () => void
 }
@@ -300,6 +308,18 @@ export const useAppStore = create<AppState>()(
       // ── Harvest Room ────────────────────────────────────────────────────────
       harvestResults: [],
       addHarvestResult: (result) => set({ harvestResults: [...get().harvestResults, result] }),
+
+      // ── News (session-only) ─────────────────────────────────────────────────
+      newsItems: [],
+      newsLastFetched: null,
+
+      // ── Convenience aliases ──────────────────────────────────────────────────
+      setSipSetupDate: (v) => set({ portfolioSetupDate: v }),
+      resetForNewUser: () => set({
+        fearProgress: 0, completedModules: [], simulationResult: null,
+        timeMachineResult: null, sandboxResult: null, streakDays: 0,
+        lastVisitDate: '', dashboardSection: 'home', harvestResults: [],
+      }),
 
       // ── Reset ───────────────────────────────────────────────────────────────
       reset: () => set({

@@ -1,10 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore, type FearType } from '../../store/useAppStore'
-import {
-  Home, LineChart, Clock, BookOpen, MessageCircle, CreditCard,
-  Menu, X, Flame, FlaskConical, Wallet, Sprout, Fingerprint, LogIn, LogOut, ChevronDown
-} from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import DashboardHome from './DashboardHome'
 import ArjunFloatingButton from './shared/ArjunFloatingButton'
 import SimulationPage from './pages/SimulationPage'
@@ -17,63 +13,106 @@ import Sandbox from './pages/Sandbox'
 import PortfolioPage from './pages/PortfolioPage'
 import FearProfilePage from './pages/FearProfilePage'
 import HarvestRoom from './pages/HarvestRoom'
+import {
+  Home, LineChart, Clock, FlaskConical, Sprout, BookOpen,
+  MessageCircle, Wallet, ChevronDown, ChevronRight, X, User,
+  LogOut, LogIn, Fingerprint, CreditCard, Flame, BarChart3, Check,
+} from 'lucide-react'
 
-const NAV_ITEMS = [
-  { id: 'home', label: 'Home', icon: Home, tooltip: 'Your dashboard' },
-  { id: 'portfolio', label: 'Portfolio', icon: Wallet, tooltip: 'Your investments' },
-  { id: 'simulation', label: 'My Simulation', icon: LineChart, tooltip: 'Monte Carlo SIP' },
-  { id: 'time-machine', label: 'Time Machine', icon: Clock, tooltip: 'Historical replay' },
-  { id: 'sandbox', label: 'Sandbox', icon: FlaskConical, tooltip: 'FY Time Machine' },
-  { id: 'harvest', label: 'Harvest Room', icon: Sprout, tooltip: 'Freeform simulator' },
-  { id: 'learn', label: 'Learn', icon: BookOpen, tooltip: 'Investing basics' },
-  { id: 'fear-profile', label: 'My Fear Profile', icon: Fingerprint, tooltip: 'Your fear type' },
-  { id: 'arjun', label: 'Arjun', icon: MessageCircle, tooltip: 'AI mentor' },
-  { id: 'my-card', label: 'My Card', icon: CreditCard, tooltip: 'Fear fingerprint' },
-]
+/* ── Constants ─────────────────────────────────────────────────────────────── */
 
 const FEAR_NAMES: Record<FearType, string> = {
   loss: 'Loss Avoider', jargon: 'Clarity Seeker', scam: 'Pattern Detector', trust: 'Independence Guardian',
 }
 const FEAR_COLORS: Record<FearType, string> = {
-  loss: '#E24B4A', jargon: '#378ADD', scam: '#c0f18e', trust: '#1D9E75',
+  loss: '#E24B4A', jargon: '#378ADD', scam: '#EF9F27', trust: '#1D9E75',
 }
 
-function NavTooltip({ text, show }: { text: string; show: boolean }) {
-  return (
-    <AnimatePresence>
-      {show && (
-        <motion.div
-          initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-          transition={{ duration: 0.15 }}
-          className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2.5 py-1 rounded-lg whitespace-nowrap pointer-events-none z-50"
-          style={{ background: 'rgba(192,241,142,0.10)', border: '1px solid rgba(192,241,142,0.18)' }}
-        >
-          <span className="font-sans text-[10px]" style={{ color: 'var(--accent)' }}>{text}</span>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  )
+const SIMULATE_SECTIONS = ['simulation', 'time-machine', 'sandbox', 'harvest']
+
+const SIMULATE_ITEMS = [
+  { id: 'simulation',   label: 'My Simulation',  desc: 'Monte Carlo fan chart',                icon: LineChart },
+  { id: 'time-machine', label: 'Time Machine',    desc: '₹500 through real market crashes',      icon: Clock },
+  { id: 'sandbox',      label: 'Sandbox',         desc: 'Invest in any historical year',         icon: FlaskConical },
+  { id: 'harvest',      label: 'Harvest Room',    desc: 'Freeform portfolio simulator',          icon: Sprout },
+]
+
+/* ── Active state resolver ─────────────────────────────────────────────────── */
+
+function getActiveTab(section: string): string | null {
+  if (section === 'home') return 'home'
+  if (SIMULATE_SECTIONS.includes(section)) return 'simulate'
+  if (section === 'learn') return 'learn'
+  if (section === 'arjun') return 'arjun'
+  if (section === 'portfolio') return 'portfolio'
+  return null
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   MAIN COMPONENT
+   ══════════════════════════════════════════════════════════════════════════════ */
 
 export default function PersonalizedDashboard() {
   const dashboardSection = useAppStore(s => s.dashboardSection)
   const setDashboardSection = useAppStore(s => s.setDashboardSection)
   const fearType = useAppStore(s => s.fearType) ?? 'loss'
   const userName = useAppStore(s => s.userName) || ''
+  const userEmail = useAppStore(s => s.userEmail) || ''
   const displayName = userName && userName !== 'Explorer' ? userName.split(' ')[0] : ''
   const streakDays = useAppStore(s => s.streakDays)
   const updateStreak = useAppStore(s => s.updateStreak)
-
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [hoveredNav, setHoveredNav] = useState<string | null>(null)
-  const [streakHover, setStreakHover] = useState(false)
-  const [profileDropdown, setProfileDropdown] = useState(false)
   const isAuthenticated = useAppStore(s => s.isAuthenticated)
   const signOut = useAppStore(s => s.signOut)
   const setView = useAppStore(s => s.setView)
+  const fearProgress = useAppStore(s => s.fearProgress)
+  const completedModules = useAppStore(s => s.completedModules)
 
   useEffect(() => { updateStreak() }, [updateStreak])
 
+  /* ── Dropdown state — only one open at a time ─────────────────────── */
+  const [openDropdown, setOpenDropdown] = useState<'simulate' | 'profile' | null>(null)
+  const [mobileDrawer, setMobileDrawer] = useState(false)
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(null)
+  const profileRef = useRef<HTMLDivElement>(null)
+
+  const activeTab = getActiveTab(dashboardSection)
+
+  /* ── Outside-click for profile dropdown ───────────────────────────── */
+  useEffect(() => {
+    if (openDropdown !== 'profile') return
+    const handler = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [openDropdown])
+
+  /* ── Simulate hover handlers (120ms close delay) ──────────────────── */
+  const openSimulate = useCallback(() => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+    setOpenDropdown('simulate')
+  }, [])
+
+  const scheduleCloseSimulate = useCallback(() => {
+    closeTimerRef.current = setTimeout(() => {
+      setOpenDropdown(prev => prev === 'simulate' ? null : prev)
+    }, 120)
+  }, [])
+
+  const keepSimulateOpen = useCallback(() => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current)
+  }, [])
+
+  /* ── Navigate helper ──────────────────────────────────────────────── */
+  const nav = useCallback((section: string) => {
+    setDashboardSection(section)
+    setOpenDropdown(null)
+    setMobileDrawer(false)
+  }, [setDashboardSection])
+
+  /* ── Section renderer (unchanged) ─────────────────────────────────── */
   function renderSection() {
     switch (dashboardSection) {
       case 'home':        return <DashboardHome key="home" />
@@ -91,181 +130,358 @@ export default function PersonalizedDashboard() {
     }
   }
 
+  /* ── Fear type colour helpers ──────────────────────────────────────── */
+  const ftColor = FEAR_COLORS[fearType]
+  const initial = (displayName || 'K').charAt(0).toUpperCase()
+
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg)' }}>
-      {/* ── Fixed Top Navbar ──────────────────────────────────────────── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 border-b" style={{ background: 'var(--bg)', borderColor: 'rgba(255,255,255,0.06)' }}>
-        <div className="max-w-[1400px] mx-auto px-5 md:px-8 flex items-center justify-between h-[64px]">
 
-          {/* Logo */}
-          <h1 className="font-display font-bold text-lg tracking-[0.08em] shrink-0 cursor-pointer"
-            onClick={() => setDashboardSection('home')}
-            style={{ color: 'var(--accent)' }}>
-            KINETIC
-          </h1>
-
-          {/* Center nav — desktop */}
-          <div className="hidden lg:flex items-center gap-1">
-            {NAV_ITEMS.map(item => {
-              const isActive = dashboardSection === item.id
-              const isHovered = hoveredNav === item.id
-              return (
-                <button key={item.id} onClick={() => setDashboardSection(item.id)}
-                  onMouseEnter={() => setHoveredNav(item.id)}
-                  onMouseLeave={() => setHoveredNav(null)}
-                  className="relative px-4 py-2 font-sans text-[13px] font-medium transition-[color] duration-150"
-                  style={{ color: isActive ? 'var(--text-primary)' : isHovered ? 'rgba(255,255,255,0.7)' : 'var(--text-secondary)' }}
-                >
-                  {item.label}
-                  {isActive && (
-                    <motion.div layoutId="nav-underline" className="absolute bottom-0 left-2 right-2 h-[2px] rounded-full"
-                      style={{ background: 'var(--accent)' }} transition={{ type: 'spring', stiffness: 400, damping: 30 }} />
-                  )}
-                  <NavTooltip text={item.tooltip} show={isHovered && !isActive} />
-                </button>
-              )
-            })}
+      {/* ══════════════════════════════════════════════════════════════════
+          NAVBAR — Fixed, 60px, full width
+          ══════════════════════════════════════════════════════════════════ */}
+      <nav
+        className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between"
+        style={{
+          height: 60,
+          padding: '0 40px',
+          background: 'rgba(10,10,15,0.85)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}
+      >
+        {/* ── Left: KINETIC logo ──────────────────────────────────────── */}
+        <button onClick={() => nav('home')} className="flex items-center gap-2 shrink-0">
+          <div className="w-[18px] h-[18px] flex items-center justify-center" style={{ background: 'var(--accent)' }}>
+            <div className="w-[5px] h-[12px] skew-x-[15deg]" style={{ background: '#00161b' }} />
           </div>
+          <span className="font-display font-bold text-[18px] tracking-[0.12em] text-white">KINETIC</span>
+        </button>
 
-          {/* Right — desktop */}
-          <div className="hidden lg:flex items-center gap-4 shrink-0">
-            {/* Streak */}
-            {isAuthenticated && (
-              <div className="relative flex items-center gap-1.5 cursor-default"
-                onMouseEnter={() => setStreakHover(true)} onMouseLeave={() => setStreakHover(false)}>
-                <Flame className="w-3.5 h-3.5" style={{ color: 'var(--accent)' }} />
-                <span className="font-mono text-[11px] font-bold" style={{ color: 'var(--accent)' }}>{streakDays || 0}</span>
-                <NavTooltip text={streakDays > 0 ? `${streakDays} day streak` : 'Visit daily to streak'} show={streakHover} />
-              </div>
-            )}
+        {/* ── Centre: Nav items — hidden below md ─────────────────────── */}
+        <div className="hidden md:flex items-center justify-center" style={{ gap: 0 }}>
+          {/* Home */}
+          <NavItem label="Home" active={activeTab === 'home'} onClick={() => nav('home')} />
 
-            {isAuthenticated ? (
-              <>
-                {/* Profile button with dropdown */}
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileDropdown(!profileDropdown)}
-                    className="relative flex items-center gap-2.5 px-3 py-1.5 rounded-full border transition-[border-color,background-color] duration-200"
+          {/* Simulate (with dropdown) */}
+          <div
+            className="relative"
+            onMouseEnter={openSimulate}
+            onMouseLeave={scheduleCloseSimulate}
+          >
+            <NavItem
+              label="Simulate"
+              active={activeTab === 'simulate'}
+              hasChevron
+              chevronOpen={openDropdown === 'simulate'}
+              onClick={() => nav('simulation')}
+            />
+
+            {/* Simulate Dropdown */}
+            <AnimatePresence>
+              {openDropdown === 'simulate' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="fixed"
+                  style={{ top: 60, zIndex: 200 }}
+                  onMouseEnter={keepSimulateOpen}
+                  onMouseLeave={scheduleCloseSimulate}
+                >
+                  <div
+                    className="mt-2 overflow-hidden"
                     style={{
-                      borderColor: profileDropdown ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.08)',
-                      background: profileDropdown ? 'rgba(255,255,255,0.06)' : 'transparent',
+                      width: 280,
+                      background: 'rgba(10,10,15,0.96)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 16,
+                      padding: 8,
                     }}
                   >
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center font-display font-bold text-[11px]"
-                      style={{ background: `${FEAR_COLORS[fearType]}18`, color: FEAR_COLORS[fearType] }}>
-                      {(displayName || 'K').charAt(0).toUpperCase()}
-                    </div>
-                    <span className="font-sans text-xs text-white/50">{displayName || FEAR_NAMES[fearType]}</span>
-                    <ChevronDown className={`w-3 h-3 text-white/25 transition-transform duration-200 ${profileDropdown ? 'rotate-180' : ''}`} />
-                  </button>
-
-                  <AnimatePresence>
-                    {profileDropdown && (
-                      <>
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          className="fixed inset-0 z-30" onClick={() => setProfileDropdown(false)} />
-                        <motion.div
-                          initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute right-0 top-full mt-2 w-48 rounded-xl border overflow-hidden z-40"
-                          style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-                        >
+                    {SIMULATE_ITEMS.map((item, i) => {
+                      const Icon = item.icon
+                      return (
+                        <div key={item.id}>
+                          {i > 0 && <div className="mx-3" style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />}
                           <button
-                            onClick={() => { setDashboardSection('profile'); setProfileDropdown(false) }}
-                            className="w-full flex items-center gap-2 px-4 py-3 font-sans text-sm text-white/50 hover:text-white/70 hover:bg-white/[0.03] transition-[background-color,color] duration-150 text-left"
+                            onClick={() => nav(item.id)}
+                            className="w-full flex items-start gap-3 text-left transition-[background-color] duration-150"
+                            style={{ padding: '10px 14px', borderRadius: 10 }}
+                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                           >
-                            My Account
+                            <Icon className="w-4 h-4 mt-0.5 shrink-0" style={{ color: 'var(--accent)', strokeWidth: 1 }} />
+                            <div>
+                              <p className="font-sans text-[14px] text-white leading-tight">{item.label}</p>
+                              <p className="font-sans text-[11px] leading-tight mt-0.5" style={{ color: 'var(--text-secondary)' }}>{item.desc}</p>
+                            </div>
                           </button>
-                          <div className="border-t" style={{ borderColor: 'var(--border)' }} />
-                          <button
-                            onClick={() => { signOut(); setView('landing'); setProfileDropdown(false) }}
-                            className="w-full flex items-center gap-2 px-4 py-3 font-sans text-sm text-white/30 hover:text-[var(--danger)] hover:bg-white/[0.03] transition-[background-color,color] duration-150 text-left"
-                          >
-                            <LogOut className="w-3.5 h-3.5" /> Sign out
-                          </button>
-                        </motion.div>
-                      </>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Fear badge */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[10px] font-sans font-bold tracking-wide"
-                  style={{ background: `${FEAR_COLORS[fearType]}10`, borderColor: `${FEAR_COLORS[fearType]}30`, color: FEAR_COLORS[fearType] }}>
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: FEAR_COLORS[fearType] }} />
-                  {FEAR_NAMES[fearType]}
-                </div>
-              </>
-            ) : (
-              /* Guest — Sign In ghost button */
-              <button
-                onClick={() => setDashboardSection('portfolio')}
-                className="flex items-center gap-2 px-4 py-2 rounded-full border font-sans text-xs font-medium text-white/50 hover:text-white/70 hover:border-white/15 transition-[border-color,color] duration-200"
-                style={{ borderColor: 'var(--border)' }}
-              >
-                <LogIn className="w-3.5 h-3.5" /> Sign in
-              </button>
-            )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Mobile hamburger */}
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden w-9 h-9 rounded-xl flex items-center justify-center text-white/50"
-            style={{ background: 'rgba(255,255,255,0.04)' }}>
-            {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+          {/* Learn */}
+          <NavItem label="Learn" active={activeTab === 'learn'} onClick={() => nav('learn')} />
+
+          {/* Arjun */}
+          <NavItem label="Arjun" active={activeTab === 'arjun'} onClick={() => nav('arjun')} />
+
+          {/* Portfolio */}
+          <NavItem label="Portfolio" active={activeTab === 'portfolio'} onClick={() => nav('portfolio')} />
+        </div>
+
+        {/* ── Right: Profile avatar (desktop) + Hamburger (mobile) ────── */}
+        <div className="flex items-center gap-3 shrink-0">
+
+          {/* Profile Avatar — desktop only */}
+          <div className="hidden md:block relative" ref={profileRef}>
+            <button
+              onClick={() => setOpenDropdown(prev => prev === 'profile' ? null : 'profile')}
+              className="transition-[transform,border-color] duration-150"
+              style={{
+                width: 34, height: 34, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: isAuthenticated ? `${ftColor}33` : 'transparent',
+                border: `1.5px solid ${isAuthenticated ? `${ftColor}99` : 'rgba(255,255,255,0.2)'}`,
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.borderColor = isAuthenticated ? ftColor : 'rgba(255,255,255,0.5)'
+                e.currentTarget.style.transform = 'scale(1.04)'
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.borderColor = isAuthenticated ? `${ftColor}99` : 'rgba(255,255,255,0.2)'
+                e.currentTarget.style.transform = 'scale(1)'
+              }}
+            >
+              {isAuthenticated ? (
+                <span className="font-display font-medium text-[14px]" style={{ color: ftColor }}>{initial}</span>
+              ) : (
+                <User className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.35)' }} />
+              )}
+            </button>
+
+            {/* Profile Dropdown */}
+            <AnimatePresence>
+              {openDropdown === 'profile' && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="fixed"
+                  style={{ top: 60, right: 40, zIndex: 200 }}
+                >
+                  <div
+                    className="mt-2 overflow-hidden"
+                    style={{
+                      width: 260,
+                      background: 'rgba(10,10,15,0.96)',
+                      backdropFilter: 'blur(24px)',
+                      WebkitBackdropFilter: 'blur(24px)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 16,
+                    }}
+                  >
+                    {/* Section A — Identity */}
+                    <div style={{ padding: '14px 14px 12px' }}>
+                      <p className="font-sans font-medium text-[15px] text-white">
+                        {displayName || <span style={{ color: 'var(--text-secondary)' }}>Explorer</span>}
+                      </p>
+                      <p className="font-sans text-[12px] mt-0.5" style={{ color: isAuthenticated ? 'var(--text-secondary)' : 'rgba(255,255,255,0.2)' }}>
+                        {isAuthenticated ? (userEmail || 'No email set') : 'Not signed in'}
+                      </p>
+                      {fearType && isAuthenticated && (
+                        <div className="inline-flex items-center gap-1.5 mt-2 px-2.5 py-1 rounded-full"
+                          style={{ border: `1px solid ${ftColor}40`, background: `${ftColor}10` }}>
+                          <div className="w-1.5 h-1.5 rounded-full" style={{ background: ftColor }} />
+                          <span className="font-sans text-[11px] font-medium" style={{ color: ftColor }}>{FEAR_NAMES[fearType]}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <Divider />
+
+                    {/* Section B — Progress */}
+                    <div style={{ padding: 8 }}>
+                      <ProfileRow icon={<Flame className="w-[14px] h-[14px]" style={{ color: 'var(--accent)' }} />}
+                        label="Day streak" value={`${streakDays || 0} days`} onClick={() => nav('fear-profile')} />
+                      <ProfileRow icon={<BarChart3 className="w-[14px] h-[14px]" style={{ color: 'var(--teal)' }} />}
+                        label="Fear overcome" value={`${fearProgress || 0}%`} onClick={() => nav('fear-profile')} />
+                      <ProfileRow icon={<Check className="w-[14px] h-[14px]" style={{ color: 'var(--teal)' }} />}
+                        label="Modules done" value={`${completedModules?.length || 0}`} onClick={() => nav('learn')} />
+                    </div>
+
+                    <Divider />
+
+                    {/* Section C — Profile links */}
+                    <div style={{ padding: 8 }}>
+                      <ProfileRow icon={<Fingerprint className="w-[14px] h-[14px]" style={{ color: 'var(--text-secondary)' }} />}
+                        label="My Fear Profile" onClick={() => nav('fear-profile')} />
+                      <ProfileRow icon={<CreditCard className="w-[14px] h-[14px]" style={{ color: 'var(--text-secondary)' }} />}
+                        label="My Kinetic Card" onClick={() => nav('my-card')} />
+                    </div>
+
+                    <Divider />
+
+                    {/* Section D — Auth */}
+                    <div style={{ padding: 8 }}>
+                      {isAuthenticated ? (
+                        <button
+                          onClick={() => { signOut(); setView('landing'); setOpenDropdown(null) }}
+                          className="w-full flex items-center gap-3 text-left transition-[background-color] duration-150"
+                          style={{ padding: '8px 10px', borderRadius: 8, color: 'var(--danger)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <LogOut className="w-[14px] h-[14px]" />
+                          <span className="font-sans text-[13px] font-medium">Sign out</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => nav('portfolio')}
+                          className="w-full flex items-center gap-3 text-left transition-[background-color] duration-150"
+                          style={{ padding: '8px 10px', borderRadius: 8, color: 'var(--accent)' }}
+                          onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+                          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                        >
+                          <LogIn className="w-[14px] h-[14px]" />
+                          <span className="font-sans text-[13px] font-medium">Sign in or create account</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Hamburger — mobile only */}
+          <button
+            className="md:hidden flex flex-col justify-center items-center"
+            style={{ width: 34, height: 34, gap: 4 }}
+            onClick={() => setMobileDrawer(true)}
+          >
+            <span className="block rounded-full" style={{ width: 18, height: 2, background: 'rgba(255,255,255,0.65)' }} />
+            <span className="block rounded-full" style={{ width: 18, height: 2, background: 'rgba(255,255,255,0.65)' }} />
+            <span className="block rounded-full" style={{ width: 18, height: 2, background: 'rgba(255,255,255,0.65)' }} />
           </button>
         </div>
       </nav>
 
-      {/* ── Mobile Drawer ─────────────────────────────────────────────── */}
+      {/* ══════════════════════════════════════════════════════════════════
+          MOBILE DRAWER — slides from right, 280px
+          ══════════════════════════════════════════════════════════════════ */}
       <AnimatePresence>
-        {mobileMenuOpen && (
+        {mobileDrawer && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
-            <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              className="lg:hidden fixed top-0 left-0 bottom-0 w-[280px] z-50 border-r p-6 flex flex-col gap-2"
-              style={{ background: 'var(--bg)', borderColor: 'rgba(255,255,255,0.06)' }}>
-              <h2 className="font-display font-bold text-lg tracking-[0.08em] mb-4" style={{ color: 'var(--accent)' }}>KINETIC</h2>
-              {/* Profile row */}
-              <button onClick={() => { setDashboardSection('profile'); setMobileMenuOpen(false) }}
-                className="flex items-center gap-3 p-3 rounded-xl mb-2 border"
-                style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center font-display font-bold"
-                  style={{ background: `${FEAR_COLORS[fearType]}18`, color: FEAR_COLORS[fearType] }}>
-                  {(displayName || 'K').charAt(0).toUpperCase()}
+            {/* Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="md:hidden fixed inset-0 z-[199]"
+              style={{ background: 'rgba(0,0,0,0.5)' }}
+              onClick={() => setMobileDrawer(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              initial={{ x: 280 }} animate={{ x: 0 }} exit={{ x: 280 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className="md:hidden fixed top-0 right-0 bottom-0 z-[200] flex flex-col"
+              style={{
+                width: 280,
+                background: 'rgba(10,10,15,0.96)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+                borderLeft: '1px solid rgba(255,255,255,0.08)',
+              }}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between" style={{ padding: '0 20px', height: 60 }}>
+                <span className="font-display font-bold text-[14px] tracking-[0.12em] text-white">KINETIC</span>
+                <button onClick={() => setMobileDrawer(false)} className="text-white/50">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+              {/* Nav items */}
+              <div className="flex-1 overflow-y-auto" style={{ padding: '8px 12px' }}>
+                <MobileNavItem label="Home" active={activeTab === 'home'} onClick={() => nav('home')} />
+
+                {/* Simulate group */}
+                <div className="mt-1">
+                  <p className="font-sans text-[11px] font-medium uppercase tracking-wider px-3 py-2" style={{ color: 'rgba(255,255,255,0.2)' }}>Simulate</p>
+                  {SIMULATE_ITEMS.map(item => (
+                    <MobileNavItem key={item.id} label={item.label} active={dashboardSection === item.id} indent onClick={() => nav(item.id)} />
+                  ))}
                 </div>
-                <div className="text-left">
-                  <p className="font-sans text-sm text-white font-medium">{displayName || FEAR_NAMES[fearType]}</p>
-                  <p className="font-sans text-[10px]" style={{ color: FEAR_COLORS[fearType] }}>{FEAR_NAMES[fearType]}</p>
+
+                <MobileNavItem label="Learn" active={activeTab === 'learn'} onClick={() => nav('learn')} />
+                <MobileNavItem label="Arjun" active={activeTab === 'arjun'} onClick={() => nav('arjun')} />
+                <MobileNavItem label="Portfolio" active={activeTab === 'portfolio'} onClick={() => nav('portfolio')} />
+              </div>
+
+              {/* Bottom: Profile section */}
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                {/* Identity */}
+                <div style={{ padding: '14px 16px 10px' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center font-display font-medium text-[13px]"
+                      style={{ background: `${ftColor}25`, border: `1.5px solid ${ftColor}80`, color: ftColor }}>
+                      {initial}
+                    </div>
+                    <div>
+                      <p className="font-sans text-[14px] text-white font-medium">{displayName || 'Explorer'}</p>
+                      {fearType && (
+                        <p className="font-sans text-[11px] mt-0.5" style={{ color: ftColor }}>{FEAR_NAMES[fearType]}</p>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <Flame className="w-3.5 h-3.5 ml-auto" style={{ color: 'var(--accent)' }} />
-                <span className="font-mono text-[11px]" style={{ color: 'var(--accent)' }}>{streakDays}</span>
-              </button>
-              <div className="border-b mb-2" style={{ borderColor: 'rgba(255,255,255,0.05)' }} />
-              {NAV_ITEMS.map(item => {
-                const isActive = dashboardSection === item.id
-                const Icon = item.icon
-                return (
-                  <button key={item.id} onClick={() => { setDashboardSection(item.id); setMobileMenuOpen(false) }}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-[background-color,color] duration-200"
-                    style={{ background: isActive ? 'rgba(192,241,142,0.07)' : 'transparent', color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.40)' }}>
-                    <Icon className="w-4 h-4" />
-                    <span className="font-sans text-sm font-medium">{item.label}</span>
-                    <span className="font-sans text-[9px] text-white/20 ml-auto">{item.tooltip}</span>
-                  </button>
-                )
-              })}
+
+                {/* Quick links */}
+                <div style={{ padding: '4px 8px 8px' }}>
+                  <MobileNavItem label="My Fear Profile" onClick={() => nav('fear-profile')} />
+                  <MobileNavItem label="My Kinetic Card" onClick={() => nav('my-card')} />
+                </div>
+
+                <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 12px' }} />
+
+                {/* Auth */}
+                <div style={{ padding: '8px 12px 16px' }}>
+                  {isAuthenticated ? (
+                    <button onClick={() => { signOut(); setView('landing'); setMobileDrawer(false) }}
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-sans text-[13px] font-medium"
+                      style={{ color: 'var(--danger)' }}>
+                      <LogOut className="w-4 h-4" /> Sign out
+                    </button>
+                  ) : (
+                    <button onClick={() => nav('portfolio')}
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-xl font-sans text-[13px] font-medium"
+                      style={{ color: 'var(--accent)' }}>
+                      <LogIn className="w-4 h-4" /> Sign in or create account
+                    </button>
+                  )}
+                </div>
+              </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
 
-      {/* ── Main content ──────────────────────────────────────────────── */}
-      <main className="pt-[64px] pb-8 px-5 md:px-8 lg:px-12">
+      {/* ══════════════════════════════════════════════════════════════════
+          MAIN CONTENT — padding-top: 60px for fixed navbar
+          ══════════════════════════════════════════════════════════════════ */}
+      <main className="pb-8 px-5 md:px-8 lg:px-12" style={{ paddingTop: 60 }}>
         <div className="max-w-[1200px] mx-auto py-8">
           <AnimatePresence mode="wait">
             {renderSection()}
@@ -275,5 +491,106 @@ export default function PersonalizedDashboard() {
 
       {dashboardSection !== 'arjun' && <ArjunFloatingButton />}
     </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SUB-COMPONENTS
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/** Desktop nav item */
+function NavItem({
+  label, active, onClick, hasChevron, chevronOpen,
+}: {
+  label: string; active: boolean; onClick: () => void; hasChevron?: boolean; chevronOpen?: boolean
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="relative font-sans text-[15px] font-medium transition-[color] duration-150 flex items-center"
+      style={{
+        padding: '0 32px',
+        height: 60,
+        color: active ? 'var(--accent)' : hovered ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
+      }}
+    >
+      {label}
+      {hasChevron && (
+        <motion.span
+          className="ml-1 inline-flex"
+          animate={{ rotate: chevronOpen ? 180 : 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <ChevronDown className="w-[10px] h-[10px]" style={{ strokeWidth: 1 }} />
+        </motion.span>
+      )}
+      {/* Active underline — 3px */}
+      {active && (
+        <span
+          className="absolute bottom-0 left-[32px] right-[32px]"
+          style={{ height: 3, background: 'var(--accent)' }}
+        />
+      )}
+    </button>
+  )
+}
+
+/** Profile dropdown row */
+function ProfileRow({
+  icon, label, value, onClick,
+}: {
+  icon: React.ReactNode; label: string; value?: string; onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 text-left transition-[background-color] duration-150"
+      style={{ padding: '8px 10px', borderRadius: 8 }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+    >
+      {icon}
+      <span className="font-sans text-[13px] text-white/60 flex-1">{label}</span>
+      {value && <span className="font-mono text-[12px] text-white/35">{value}</span>}
+      <ChevronRight className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.15)' }} />
+    </button>
+  )
+}
+
+/** Thin divider line */
+function Divider() {
+  return <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 8px' }} />
+}
+
+/** Mobile drawer nav item */
+function MobileNavItem({
+  label, active, indent, onClick,
+}: {
+  label: string; active?: boolean; indent?: boolean; onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left transition-[background-color,color] duration-150"
+      style={{
+        height: 48,
+        display: 'flex',
+        alignItems: 'center',
+        padding: indent ? '0 16px 0 32px' : '0 16px',
+        borderRadius: 10,
+        fontSize: indent ? 13 : 15,
+        fontWeight: 500,
+        color: active ? 'var(--accent)' : 'rgba(255,255,255,0.45)',
+        background: active ? 'rgba(192,241,142,0.06)' : 'transparent',
+      }}
+      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+    >
+      {label}
+    </button>
   )
 }

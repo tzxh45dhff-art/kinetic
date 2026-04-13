@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Loader2 } from 'lucide-react'
+import { ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react'
 import { useAppStore, type FearType } from '../../store/useAppStore'
 import { postCreateUser } from '../../lib/api'
 
@@ -22,6 +22,15 @@ const FEAR_BADGES: Record<FearType, { name: string; color: string; bg: string }>
   trust: { name: 'Independence Guardian', color: '#1D9E75', bg: 'rgba(29,158,117,0.10)' },
 }
 
+// ── Input style helper ──────────────────────────────────────────────────────
+
+const INPUT_STYLE: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.04)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  border: '1px solid rgba(255,255,255,0.08)',
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 interface SignUpProps {
@@ -31,14 +40,26 @@ interface SignUpProps {
 export default function SignUp({ onComplete }: SignUpProps) {
   const fearType = useAppStore(s => s.fearType) ?? 'loss'
   const setUserProfile = useAppStore(s => s.setUserProfile)
+  const setUserAge = useAppStore(s => s.setUserAge)
+  const setSipSetupDate = useAppStore(s => s.setSipSetupDate)
+  const resetForNewUser = useAppStore(s => s.resetForNewUser)
   const updateStreak = useAppStore(s => s.updateStreak)
 
   const [name, setName] = useState('')
+  const [age, setAge] = useState('')
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const headline = HEADLINES[fearType]
   const badge = FEAR_BADGES[fearType]
+
+  const isValid = name.trim().length > 0
+    && age.trim().length > 0 && Number(age) >= 18 && Number(age) <= 80
+    && email.trim().length > 0
+    && password.length >= 8
 
   function generateGuestId() {
     return 'guest_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
@@ -46,23 +67,40 @@ export default function SignUp({ onComplete }: SignUpProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!name.trim() || !email.trim()) return
+    if (!isValid) return
 
     setLoading(true)
+    setError('')
+
     const trimmedName = name.trim()
     const trimmedEmail = email.trim()
-    const fearT = useAppStore.getState().fearType ?? 'loss'
-    const metaphor = useAppStore.getState().metaphorStyle ?? 'generic'
+    const userAge = Math.max(18, Math.min(80, Number(age)))
 
+    // Save the current fearType before reset (quiz just set it)
+    const savedFearType = useAppStore.getState().fearType
+    const savedMetaphor = useAppStore.getState().metaphorStyle
+
+    // Clear all previous session data
+    resetForNewUser()
+
+    // Restore quiz results that were just set
+    if (savedFearType) {
+      useAppStore.setState({ fearType: savedFearType, metaphorStyle: savedMetaphor })
+    }
+
+    // Set new user data
     setUserProfile(trimmedName, trimmedEmail, '')
+    setUserAge(userAge)
+    setSipSetupDate(new Date().toISOString().split('T')[0])
 
     // Call backend to create user
     try {
       const res = await postCreateUser({
         name: trimmedName,
         email: trimmedEmail,
-        fear_type: fearT,
-        metaphor_style: metaphor,
+        fear_type: savedFearType ?? 'loss',
+        metaphor_style: savedMetaphor ?? 'generic',
+        password,
       })
       if (res.success && res.user_id) {
         useAppStore.setState({ userId: res.user_id, isAuthenticated: true })
@@ -89,6 +127,13 @@ export default function SignUp({ onComplete }: SignUpProps) {
       onComplete()
     }, 400)
   }
+
+  const fields = [
+    { key: 'name', delay: 0.26 },
+    { key: 'age', delay: 0.30 },
+    { key: 'email', delay: 0.34 },
+    { key: 'password', delay: 0.38 },
+  ]
 
   return (
     <div className="min-h-screen bg-[#00161b] flex flex-col items-center justify-center px-6 relative overflow-hidden">
@@ -151,7 +196,7 @@ export default function SignUp({ onComplete }: SignUpProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.26, ease: 'easeOut' }}
+            transition={{ duration: 0.5, delay: fields[0].delay, ease: 'easeOut' }}
           >
             <input
               type="text"
@@ -159,12 +204,25 @@ export default function SignUp({ onComplete }: SignUpProps) {
               value={name}
               onChange={e => setName(e.target.value)}
               className="w-full px-5 py-4 rounded-2xl font-sans text-sm text-white placeholder-white/25 outline-none transition-all duration-200 focus:border-white/20"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
+              style={INPUT_STYLE}
+            />
+          </motion.div>
+
+          {/* Age field */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: fields[1].delay, ease: 'easeOut' }}
+          >
+            <input
+              type="number"
+              placeholder="Your age"
+              min={18}
+              max={80}
+              value={age}
+              onChange={e => setAge(e.target.value)}
+              className="w-full px-5 py-4 rounded-2xl font-sans text-sm text-white placeholder-white/25 outline-none transition-all duration-200 focus:border-white/20"
+              style={INPUT_STYLE}
             />
           </motion.div>
 
@@ -172,7 +230,7 @@ export default function SignUp({ onComplete }: SignUpProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.34, ease: 'easeOut' }}
+            transition={{ duration: 0.5, delay: fields[2].delay, ease: 'easeOut' }}
           >
             <input
               type="email"
@@ -180,14 +238,43 @@ export default function SignUp({ onComplete }: SignUpProps) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               className="w-full px-5 py-4 rounded-2xl font-sans text-sm text-white placeholder-white/25 outline-none transition-all duration-200 focus:border-white/20"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
+              style={INPUT_STYLE}
             />
           </motion.div>
+
+          {/* Password field */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: fields[3].delay, ease: 'easeOut' }}
+            className="relative"
+          >
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Create a password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full px-5 py-4 rounded-2xl font-sans text-sm text-white placeholder-white/25 outline-none transition-all duration-200 focus:border-white/20 pr-12"
+              style={INPUT_STYLE}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/50 transition-colors"
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+            {password.length > 0 && password.length < 8 && (
+              <p className="font-sans text-[10px] text-white/25 mt-1.5 pl-1">
+                Minimum 8 characters
+              </p>
+            )}
+          </motion.div>
+
+          {/* Error */}
+          {error && (
+            <p className="font-sans text-xs text-center" style={{ color: 'var(--danger)' }}>{error}</p>
+          )}
 
           {/* Submit button */}
           <motion.div
@@ -197,7 +284,7 @@ export default function SignUp({ onComplete }: SignUpProps) {
           >
             <button
               type="submit"
-              disabled={loading || !name.trim() || !email.trim()}
+              disabled={loading || !isValid}
               className="w-full py-4 rounded-full font-sans font-bold text-sm transition-all duration-200 box-glow active:scale-[0.97] disabled:opacity-40 flex items-center justify-center gap-2"
               style={{
                 background: 'var(--color-primary-fixed)',

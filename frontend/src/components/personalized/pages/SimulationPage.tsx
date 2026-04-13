@@ -7,6 +7,7 @@ import { formatINR } from '../../../lib/formatINR'
 import RiskHorizon from '../RiskHorizon'
 import CrashTimeline from '../CrashTimeline'
 import FearQuote from '../shared/FearQuote'
+import NewsImpactCard from '../../news/NewsImpactCard'
 
 Chart.register(...registerables)
 
@@ -182,6 +183,11 @@ export default function SimulationPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }}>
+      {/* News Context */}
+      <div className="mb-8">
+        <NewsImpactCard context="simulation" fearType={fearType} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
 
         {/* ── LEFT COLUMN: Controls ──────────────────────────────────────── */}
