@@ -77,3 +77,4 @@ Show response in the glass panel. Loading state: show pulsing dots. The fearType
 
 ## Polish pass (run last, never first)
 "Do a polish pass on [ComponentName]. Do not change any logic or data. Only: ensure all card entrances use Framer Motion fade-up (y:20→0, opacity:0→1, 0.6s easeOut). Ensure all number displays count up from 0 using Framer Motion useMotionValue and useTransform. Ensure all hover states on buttons and cards feel responsive. Ensure the empathy pulse is present on any screen showing loss/crash content."
+kkk
